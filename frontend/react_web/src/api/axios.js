@@ -1,0 +1,75 @@
+/**
+ * Axios client configuration for NeuroNova.
+ * Handles authentication, request/response interceptors.
+ */
+import axios from 'axios';
+import { API_CONFIG } from '../utils/config';
+
+// Create axios instance
+const axiosClient = axios.create({
+  baseURL: API_CONFIG.BASE_URL,
+  timeout: API_CONFIG.TIMEOUT,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request interceptor
+axiosClient.interceptors.request.use(
+  (config) => {
+    // Add auth token to headers
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor
+axiosClient.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Handle 401 Unauthorized - Token expired
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (!refreshToken) {
+          throw new Error('No refresh token');
+        }
+
+        // Refresh access token
+        const response = await axios.post(
+          `${API_CONFIG.BASE_URL}/api/${API_CONFIG.API_VERSION}/users/refresh/`,
+          { refresh: refreshToken }
+        );
+
+        const { access } = response.data;
+        localStorage.setItem('access_token', access);
+
+        // Retry original request
+        originalRequest.headers.Authorization = `Bearer ${access}`;
+        return axiosClient(originalRequest);
+      } catch (refreshError) {
+        // Refresh failed, logout user
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+export default axiosClient;
