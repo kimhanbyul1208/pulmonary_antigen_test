@@ -1,0 +1,13 @@
+ 집에서 작업하려면
+# 1. 클론
+git clone https://github.com/kimhanbyul1208/NeuroNova.git
+cd NeuroNova
+
+# 2. .env 파일 설정 (USB에서 복사 또는 새로 생성)
+cp backend/django_main/.env.example backend/django_main/.env
+cp frontend/react_web/.env.example frontend/react_web/.env
+
+# 3. 실행
+# Django: cd backend/django_main && python manage.py runserver
+# React: cd frontend/react_web && npm install && npm run dev
+# Flutter: cd frontend/flutter_app && flutter pub get && flutter run
