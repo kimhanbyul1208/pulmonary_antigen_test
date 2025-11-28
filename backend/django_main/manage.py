@@ -4,6 +4,10 @@ import os
 import sys
 from typing import NoReturn
 
+# PyMySQL as MySQLdb replacement
+import pymysql
+pymysql.install_as_MySQLdb()
+
 
 def main() -> None:
     """Run administrative tasks."""
