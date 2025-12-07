@@ -16,6 +16,10 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       proxy: {
+        '/ml': {
+          target: env.VITE_API_URL || 'http://localhost:8000',
+          changeOrigin: true,
+        },
         '/api': {
           target: env.VITE_API_URL || 'http://localhost:8000',
           changeOrigin: true,

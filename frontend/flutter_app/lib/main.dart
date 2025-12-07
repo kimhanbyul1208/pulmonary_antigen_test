@@ -20,6 +20,8 @@ import 'features/records/medical_records_screen.dart';
 import 'features/records/record_detail_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/profile/edit_profile_screen.dart';
+import 'package:provider/provider.dart';
+import 'providers/appointment_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,7 +59,15 @@ void main() async {
 
   // Check for auto-login
   final initialRoute = await _getInitialRoute();
-  runApp(MyApp(initialRoute: initialRoute));
+  
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppointmentProvider()),
+      ],
+      child: MyApp(initialRoute: initialRoute),
+    ),
+  );
 }
 
 Future<String> _getInitialRoute() async {

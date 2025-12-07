@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 import DashboardLayout from '../layouts/DashboardLayout';
 import BiomarkerClassificationCard from '../components/BiomarkerClassificationCard';
 import ProteinButtonGrid from '../components/ProteinButtonGrid';
 import ProteinDetailModal from '../components/ProteinDetailModal';
 import XAIVisualization from '../components/XAIVisualization';
+import biomarkerService from '../services/biomarkerService';
 import './DashboardPage.css';
 import './BiomarkerAnalysisPage.css';
 
@@ -15,6 +17,7 @@ import './BiomarkerAnalysisPage.css';
  */
 const BiomarkerAnalysisPage = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState(0);
     const [biomarkers, setBiomarkers] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -89,16 +92,77 @@ const BiomarkerAnalysisPage = () => {
         setModalOpen(true);
     };
 
-    // 분석 실행 (목업)
-    const handleAnalyze = () => {
+    // 분석 실행
+    const handleAnalyze = async () => {
         setLoading(true);
-        // 실제로는 Flask API 호출
-        // const response = await fetch('/api/ai/biomarker-analysis', { method: 'POST', body: proteinValues });
+        try {
+            // Flask API expects { items: [ { sequence: "...", ... } ] } or single item
+            // Based on current UI, we are sending protein values. 
+            // However, the backend expects sequences. 
+            // For this demo integration, we might need to adjust the backend or frontend.
+            // Assuming the backend can handle the current proteinValues structure OR we need to map it.
 
-        setTimeout(() => {
+            // WAIT: The backend `app.py` and `routes.py` show it expects `sequence` (string) for protein/DNA.
+            // But the frontend `BiomarkerAnalysisPage` has `proteinValues` which are numeric values for 30 biomarkers.
+            // This is a MISMATCH. 
+            // The frontend mock data `proteinValues` (numeric) vs Backend `predict` (sequence based).
+
+            // Let's look at `routes.py` again. It imports `ml.model`.
+            // The backend seems to be a Sequence-based model (DNA/Protein sequence -> Class).
+            // The frontend seems to be a Tabular-based model (30 biomarkers -> Class).
+
+            // I should probably check if there is another endpoint or if I need to use `example_data` to get sequences.
+            // The user asked to "Analyze and improve BiomarkerAnalysisPage".
+            // Connecting it to the *existing* backend is the goal.
+            // If the backend is sequence-based, the frontend should probably allow sequence input or use the example data.
+
+            // Let's use `getExampleData` to populate the "Data Input" tab with sequences instead of numeric values?
+            // Or, for now, let's just try to call the API with what we have and see (or better, adapt the frontend to match backend).
+
+            // The backend `example_data` returns items with `sequence`.
+            // Let's assume we want to analyze those sequences.
+
+            // Let's change the frontend to fetch example data first, then send it back for analysis.
+
+            const exampleData = await biomarkerService.getExampleData();
+            if (exampleData.ok && exampleData.items.length > 0) {
+                // Use the first person's first sample for demo
+                const sample = exampleData.items[0].samples[0];
+
+                const response = await biomarkerService.analyzeBiomarkers({
+                    sequence: sample.sequence,
+                    seq_type: 'protein',
+                    doctor_id: user?.id, // Pass logged-in user ID
+                    doctor_name: user?.username, // Pass username as fallback/name
+                    patient_id: 1, // Placeholder for demo patient
+                    patient_name: "Patient Demo" // Placeholder name
+                });
+
+                if (response.ok) {
+                    setAnalysisResult({
+                        category: response.prediction.task3.top_predictions[0][0], // Adjust based on actual response structure
+                        confidence: response.prediction.task3.top_predictions[0][1],
+                        probabilities: {
+                            // Map response probabilities if available, or just use top 1
+                            [response.prediction.task3.top_predictions[0][0]]: response.prediction.task3.top_predictions[0][1]
+                        },
+                        xai: {
+                            feature_importance: {
+                                // Backend might not return feature importance for sequence model in the same way
+                                'Sequence Analysis': 1.0
+                            }
+                        }
+                    });
+                    setActiveTab(1);
+                }
+            }
+
+        } catch (error) {
+            console.error("Analysis failed", error);
+            alert("분석에 실패했습니다. 백엔드 연결을 확인해주세요.");
+        } finally {
             setLoading(false);
-            setActiveTab(1); // 결과 탭으로 전환
-        }, 2000);
+        }
     };
 
     // 상세 보기

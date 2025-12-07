@@ -36,13 +36,16 @@ class AppointmentModel {
   factory AppointmentModel.fromJson(Map<String, dynamic> json) {
     return AppointmentModel(
       serverId: json['id'] as int?,
-      patientId: json['patient_id'] as int? ?? json['patient'] as int,
-      doctorId: json['doctor_id'] as int? ?? json['doctor'] as int?,
+      patientId: json['patient'] as int? ?? json['patient_id'] as int? ?? 0,
+      doctorId: json['doctor'] as int? ?? json['doctor_id'] as int?,
       doctorName: json['doctor_name'] as String?,
-      scheduledAt: DateTime.parse(json['scheduled_at'] as String),
+      // Handle both 'scheduled_at' (frontend mock) and 'encounter_date' (Django API)
+      scheduledAt: DateTime.parse(
+          json['encounter_date'] as String? ?? json['scheduled_at'] as String),
       durationMinutes: json['duration_minutes'] as int? ?? 30,
       status: json['status'] as String,
-      visitType: json['visit_type'] as String,
+      // Default visit_type if not present (Django doesn't have it yet)
+      visitType: json['visit_type'] as String? ?? 'CHECK_UP',
       reason: json['reason'] as String?,
       notes: json['notes'] as String?,
       createdAt: json['created_at'] != null

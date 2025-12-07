@@ -24,6 +24,7 @@ const DicomViewerPage = () => {
   const [studyInfo, setStudyInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   // Orthanc 서버 URL (환경 변수 또는 config에서 가져와야 함)
   const orthancUrl = API_CONFIG.ORTHANC_URL || 'http://localhost:8042';
@@ -35,11 +36,17 @@ const DicomViewerPage = () => {
         setError(null);
 
         // Orthanc API로 Study 정보 가져오기
+        // Set a timeout to fail fast if Orthanc is not running
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+
         const response = await fetch(`${orthancUrl}/studies/${studyId}`, {
           headers: {
-            'Authorization': 'Basic ' + btoa('orthanc:orthanc') // 기본 인증 (실제로는 secure storage 사용)
-          }
+            'Authorization': 'Basic ' + btoa('orthanc:orthanc')
+          },
+          signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
           throw new Error('Study를 불러올 수 없습니다.');
@@ -48,8 +55,18 @@ const DicomViewerPage = () => {
         const data = await response.json();
         setStudyInfo(data);
       } catch (err) {
-        setError(err.message || 'DICOM 데이터를 불러오는데 실패했습니다.');
-        console.error('Error fetching DICOM study:', err);
+        console.warn('Orthanc connection failed, switching to Demo Mode:', err);
+        setIsDemoMode(true);
+        // Mock Data for Demo
+        setStudyInfo({
+          ID: studyId || 'demo-study-123',
+          MainDicomTags: {
+            PatientID: 'DEMO-PATIENT-001',
+            StudyDate: '2023-12-08',
+            ModalitiesInStudy: 'MRI',
+            StudyDescription: 'Brain MRI (Demo)'
+          }
+        });
       } finally {
         setLoading(false);
       }
@@ -62,12 +79,15 @@ const DicomViewerPage = () => {
 
   // Orthanc Web Viewer URL
   const viewerUrl = `${orthancUrl}/app/explorer.html#study?uuid=${studyId}`;
+  // Demo Image (Placeholder)
+  const demoImageUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/MRI_of_Human_Brain.jpg/600px-MRI_of_Human_Brain.jpg";
 
   if (loading) {
     return <LoadingSpinner fullScreen />;
   }
 
-  if (error) {
+  // Error is only shown if even Demo Mode fails (unlikely here)
+  if (error && !isDemoMode) {
     return (
       <Container maxWidth="lg" sx={{ marginTop: 4 }}>
         <Button
@@ -96,9 +116,14 @@ const DicomViewerPage = () => {
         >
           뒤로 가기
         </Button>
-        <Typography variant="h5" component="h1">
-          DICOM 뷰어
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="h5" component="h1">
+            DICOM 뷰어
+          </Typography>
+          {isDemoMode && (
+            <Chip label="Demo Mode" color="warning" size="small" />
+          )}
+        </Box>
         <Box sx={{ width: 100 }} /> {/* Spacer for centering */}
       </Box>
 
@@ -150,18 +175,31 @@ const DicomViewerPage = () => {
         </Paper>
       )}
 
-      {/* DICOM Viewer iframe */}
-      <Paper sx={{ padding: 0, height: 'calc(100vh - 250px)', overflow: 'hidden' }}>
-        <iframe
-          src={viewerUrl}
-          title="DICOM Viewer"
-          width="100%"
-          height="100%"
-          style={{
-            border: 'none',
-            display: 'block'
-          }}
-        />
+      {/* DICOM Viewer Area */}
+      <Paper sx={{ padding: 0, height: 'calc(100vh - 250px)', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'black' }}>
+        {isDemoMode ? (
+          <Box sx={{ textAlign: 'center', color: 'white' }}>
+            <img
+              src={demoImageUrl}
+              alt="Demo MRI"
+              style={{ maxHeight: '60vh', maxWidth: '100%', objectFit: 'contain' }}
+            />
+            <Typography variant="subtitle1" sx={{ mt: 2 }}>
+              Orthanc 서버에 연결할 수 없어 데모 이미지를 표시합니다.
+            </Typography>
+          </Box>
+        ) : (
+          <iframe
+            src={viewerUrl}
+            title="DICOM Viewer"
+            width="100%"
+            height="100%"
+            style={{
+              border: 'none',
+              display: 'block'
+            }}
+          />
+        )}
       </Paper>
 
       {/* 안내 메시지 */}

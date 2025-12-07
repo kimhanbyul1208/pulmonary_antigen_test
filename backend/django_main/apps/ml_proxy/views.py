@@ -39,13 +39,22 @@ def predict_proxy(request):
                 status=400
             )
 
-        # 필수 필드 확인
+        # 필수 필드 확인 (이름 또는 ID)
         doctor_name = request_data.get('doctor_name')
         patient_name = request_data.get('patient_name')
+        doctor_id = request_data.get('doctor_id')
+        patient_id = request_data.get('patient_id')
+
+        # ID가 있으면 이름 대신 사용 (또는 이름이 없을 경우 대체)
+        if not doctor_name and doctor_id:
+            doctor_name = str(doctor_id)
+        
+        if not patient_name and patient_id:
+            patient_name = str(patient_id)
 
         if not doctor_name or not patient_name:
             return JsonResponse(
-                {"error": "doctor_name and patient_name are required"},
+                {"error": "doctor_name (or doctor_id) and patient_name (or patient_id) are required"},
                 status=400
             )
 
