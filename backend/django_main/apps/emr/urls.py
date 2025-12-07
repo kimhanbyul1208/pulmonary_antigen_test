@@ -4,6 +4,7 @@ EMR app URL configuration
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 from . import views
+from apps.emr.views.report_views import PatientReportViewSet
 
 app_name = "emr"
 
@@ -13,5 +14,6 @@ router.register(r'encounters', views.EncounterViewSet, basename='encounter')
 router.register(r'soap', views.FormSOAPViewSet, basename='soap')
 router.register(r'vitals', views.FormVitalsViewSet, basename='vitals')
 router.register(r'documents', views.MergedDocumentViewSet, basename='document')
+router.register(r'reports', PatientReportViewSet, basename='report')
 
 urlpatterns = router.urls

@@ -20,8 +20,10 @@ import 'features/records/medical_records_screen.dart';
 import 'features/records/record_detail_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/profile/edit_profile_screen.dart';
+import 'features/report/report_summary_screen.dart';
 import 'package:provider/provider.dart';
 import 'providers/appointment_provider.dart';
+import 'data/repositories/auth_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -63,6 +65,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        Provider<AuthRepository>(create: (_) => AuthRepository()),
         ChangeNotifierProvider(create: (_) => AppointmentProvider()),
       ],
       child: MyApp(initialRoute: initialRoute),
@@ -150,6 +153,9 @@ class MyApp extends StatelessWidget {
         // 프로필 관련
         '/profile': (context) => const ProfileScreen(),
         '/edit-profile': (context) => const EditProfileScreen(),
+
+        // 리포트 관련
+        '/report': (context) => const ReportSummaryScreen(),
       },
     );
   }
@@ -176,10 +182,8 @@ class _SplashScreenState extends State<SplashScreen> {
       await Future.delayed(const Duration(seconds: 2));
 
       // Check if user is logged in
-      // TODO: Implement AuthRepository
-      // final authRepo = AuthRepository();
-      // final isLoggedIn = await authRepo.isLoggedIn();
-      final isLoggedIn = false; // Temporarily hardcoded
+      final authRepo = context.read<AuthRepository>();
+      final isLoggedIn = await authRepo.isLoggedIn();
 
       if (mounted) {
         if (isLoggedIn) {

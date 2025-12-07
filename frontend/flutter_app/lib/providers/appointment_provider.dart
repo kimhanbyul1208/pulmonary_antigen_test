@@ -33,6 +33,24 @@ class AppointmentProvider with ChangeNotifier {
     ).toList()..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
   }
 
+  Future<bool> createAppointment(AppointmentModel appointment) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await _service.createAppointment(appointment);
+      // Reload appointments after creation
+      await loadAppointments();
+      return true;
+    } catch (e) {
+      print('Error creating appointment: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   List<AppointmentModel> get pastAppointments {
     final now = DateTime.now();
     return _appointments.where((a) => 
@@ -40,5 +58,21 @@ class AppointmentProvider with ChangeNotifier {
       a.status == 'CANCELLED' ||
       a.scheduledAt.isBefore(now)
     ).toList()..sort((a, b) => b.scheduledAt.compareTo(a.scheduledAt));
+  }
+  Future<bool> cancelAppointment(int id) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await _service.cancelAppointment(id);
+      await loadAppointments(); // Reload list
+      return true;
+    } catch (e) {
+      print('Error cancelling appointment: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 }

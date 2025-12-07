@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../data/repositories/appointment_repository.dart';
+import 'package:provider/provider.dart';
+import '../../providers/appointment_provider.dart';
 import '../../data/models/appointment_model.dart';
-import '../../core/utils/logger.dart';
 
 /// 예약 목록 화면
 /// 모든 예약 조회 및 관리
@@ -13,41 +13,21 @@ class AppointmentListScreen extends StatefulWidget {
 }
 
 class _AppointmentListScreenState extends State<AppointmentListScreen> {
-  final AppointmentRepository _appointmentRepo = AppointmentRepository();
-  List<AppointmentModel> _appointments = [];
-  bool _isLoading = true;
   String _selectedFilter = 'ALL';
 
   @override
   void initState() {
     super.initState();
-    _loadAppointments();
+    // 화면 진입 시 데이터 로드
+    Future.microtask(() =>
+        context.read<AppointmentProvider>().loadAppointments());
   }
 
-  Future<void> _loadAppointments() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // 로컬 DB에서 예약 목록 가져오기
-      _appointments = await _appointmentRepo.getLocalAppointments();
-    } catch (e) {
-      AppLogger.error('Failed to load appointments: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  List<AppointmentModel> get _filteredAppointments {
+  List<AppointmentModel> _getFilteredAppointments(List<AppointmentModel> appointments) {
     if (_selectedFilter == 'ALL') {
-      return _appointments;
+      return appointments;
     }
-    return _appointments
+    return appointments
         .where((apt) => apt.status == _selectedFilter)
         .toList();
   }
@@ -57,7 +37,7 @@ class _AppointmentListScreenState extends State<AppointmentListScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('예약 취소'),
-        content: const Text('이 예약을 취소하시겠습니까?'),
+        content: const Text('정말로 예약을 취소하시겠습니까?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -65,28 +45,22 @@ class _AppointmentListScreenState extends State<AppointmentListScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
-            child: const Text('예, 취소합니다'),
+            child: const Text('예', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
 
-    if (confirmed == true) {
-      try {
-        await _appointmentRepo.cancelAppointment(id);
-        if (mounted) {
+    if (confirmed == true && mounted) {
+      final success = await context.read<AppointmentProvider>().cancelAppointment(id);
+      if (mounted) {
+        if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('예약이 취소되었습니다')),
+            const SnackBar(content: Text('예약이 취소되었습니다.')),
           );
-          _loadAppointments();
-        }
-      } catch (e) {
-        if (mounted) {
+        } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('예약 취소 실패: $e')),
+            const SnackBar(content: Text('예약 취소에 실패했습니다.')),
           );
         }
       }
@@ -105,76 +79,84 @@ class _AppointmentListScreenState extends State<AppointmentListScreen> {
               // 예약 생성 화면으로 이동
               final result =
                   await Navigator.pushNamed(context, '/appointment-create');
-              if (result == true) {
-                _loadAppointments();
+              if (result == true && mounted) {
+                 context.read<AppointmentProvider>().loadAppointments();
               }
             },
             tooltip: '예약 생성',
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // 필터 칩
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildFilterChip('ALL', '전체'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('PENDING', '대기'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('CONFIRMED', '확정'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('COMPLETED', '완료'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('CANCELLED', '취소'),
-                ],
-              ),
-            ),
-          ),
-          const Divider(height: 1),
+      body: Consumer<AppointmentProvider>(
+        builder: (context, provider, child) {
+          if (provider.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-          // 예약 목록
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : RefreshIndicator(
-                    onRefresh: _loadAppointments,
-                    child: _filteredAppointments.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.event_busy,
-                                  size: 64,
-                                  color: Colors.grey[400],
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  '예약이 없습니다',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _filteredAppointments.length,
-                            itemBuilder: (context, index) {
-                              final appointment = _filteredAppointments[index];
-                              return _buildAppointmentCard(appointment);
-                            },
-                          ),
+          final filteredAppointments = _getFilteredAppointments(provider.appointments);
+
+          return Column(
+            children: [
+              // 필터 칩
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildFilterChip('ALL', '전체'),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('PENDING', '대기'),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('CONFIRMED', '확정'),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('COMPLETED', '완료'),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('CANCELLED', '취소'),
+                    ],
                   ),
-          ),
-        ],
+                ),
+              ),
+              const Divider(height: 1),
+
+              // 예약 목록
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () => provider.loadAppointments(),
+                  child: filteredAppointments.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.event_busy,
+                                size: 64,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                '예약이 없습니다',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: filteredAppointments.length,
+                          itemBuilder: (context, index) {
+                            final appointment = filteredAppointments[index];
+                            return _buildAppointmentCard(appointment);
+                          },
+                        ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -308,7 +290,7 @@ class _AppointmentListScreenState extends State<AppointmentListScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
-                    onPressed: () => _cancelAppointment(appointment.id!),
+                    onPressed: () => _cancelAppointment(appointment.id ?? 0),
                     icon: const Icon(Icons.cancel, size: 18),
                     label: const Text('예약 취소'),
                     style: TextButton.styleFrom(

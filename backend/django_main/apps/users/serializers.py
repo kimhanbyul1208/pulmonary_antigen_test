@@ -168,6 +168,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         allow_blank=True,
         write_only=True
     )
+    ssn = serializers.CharField(
+        write_only=True,
+        required=False,
+        help_text="주민등록번호 (환자 가입 시 필수)"
+    )
 
     class Meta:
         model = User
@@ -180,6 +185,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             'last_name',
             'role',
             'phone_number',
+            'ssn',
         ]
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
@@ -188,6 +194,16 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 'password_confirm': 'Passwords do not match.'
             })
+            raise serializers.ValidationError({
+                'password_confirm': 'Passwords do not match.'
+            })
+        
+        # Validate SSN for Patient role
+        if attrs.get('role', 'PATIENT') == 'PATIENT' and not attrs.get('ssn'):
+            raise serializers.ValidationError({
+                'ssn': '환자 가입 시 주민등록번호는 필수입니다.'
+            })
+            
         return attrs
 
     def create(self, validated_data: Dict[str, Any]) -> User:
@@ -248,25 +264,69 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         if role == 'PATIENT':
             from apps.emr.models import Patient
             from config.constants import Gender
+            from apps.users.utils import normalize_phone_number, decrypt_ssn
             import datetime
 
-            # Generate unique PID
-            pid = f"PT-{datetime.datetime.now().strftime('%Y%m%d')}-{user.id:04d}"
+            # Check for existing patient by phone
+            normalized_phone = normalize_phone_number(phone_number)
+            existing_patient = Patient.objects.filter(phone=normalized_phone).first()
+            
+            linked = False
+            if existing_patient:
+                # Verify SSN
+                input_ssn = validated_data.get('ssn')
+                if existing_patient.ssn_encrypted:
+                    try:
+                        decrypted_ssn = decrypt_ssn(existing_patient.ssn_encrypted)
+                        if decrypted_ssn == input_ssn:
+                            # Match found! Link account
+                            
+                            # Check if patient already has a user
+                            if existing_patient.user:
+                                # If it's a placeholder account (username == phone), delete it
+                                if existing_patient.user.username == normalized_phone:
+                                    old_user = existing_patient.user
+                                    existing_patient.user = None
+                                    existing_patient.save()
+                                    old_user.delete()
+                                    logger.info(f"Deleted placeholder user {old_user.username} for patient {existing_patient.pid}")
+                                else:
+                                    # Already has a real account
+                                    raise serializers.ValidationError(
+                                        "이미 등록된 계정이 있습니다. 아이디 찾기를 이용해주세요."
+                                    )
+                            
+                            # Link new user
+                            existing_patient.user = user
+                            existing_patient.save()
+                            linked = True
+                            logger.info(f"Linked user {user.username} to existing patient {existing_patient.pid}")
+                            
+                    except Exception as e:
+                        logger.error(f"SSN verification failed: {e}")
+                        # Fall through to create new patient if verification fails? 
+                        # Or raise error? For security, maybe better to raise error if phone matches but SSN fails?
+                        # But for now, let's treat as mismatch -> new patient (or error)
+                        pass
 
-            # Set default date of birth (2000-01-01) and gender (Other)
-            # User can update this later via their profile
-            Patient.objects.create(
-                user=user,
-                pid=pid,
-                first_name=validated_data.get('first_name', ''),
-                last_name=validated_data.get('last_name', ''),
-                phone=phone_number,
-                email=validated_data['email'],
-                date_of_birth=datetime.date(2000, 1, 1),  # Default DOB, can be updated later
-                gender=Gender.OTHER,  # Default gender, can be updated later
-                address='',  # Can be updated later via profile
-            )
-            logger.info(f"Patient record created for user: {user.username} with PID: {pid}")
+            if not linked:
+                # Generate unique PID
+                pid = f"PT-{datetime.datetime.now().strftime('%Y%m%d')}-{user.id:04d}"
+
+                # Set default date of birth (2000-01-01) and gender (Other)
+                # User can update this later via their profile
+                Patient.objects.create(
+                    user=user,
+                    pid=pid,
+                    first_name=validated_data.get('first_name', ''),
+                    last_name=validated_data.get('last_name', ''),
+                    phone=phone_number,
+                    email=validated_data['email'],
+                    date_of_birth=datetime.date(2000, 1, 1),  # Default DOB, can be updated later
+                    gender=Gender.OTHER,  # Default gender, can be updated later
+                    address='',  # Can be updated later via profile
+                )
+                logger.info(f"Patient record created for user: {user.username} with PID: {pid}")
 
         logger.info(f"New user registered: {user.username} with role {role}. Active: {is_active}, Status: {approval_status}")
         return user

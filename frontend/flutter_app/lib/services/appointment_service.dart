@@ -107,4 +107,28 @@ class AppointmentService {
       throw e;
     }
   }
+  // 예약 취소
+  Future<void> cancelAppointment(int id) async {
+    try {
+      final token = await _storage.read(key: 'access_token');
+      if (token == null) throw Exception('로그인이 필요합니다.');
+
+      final response = await _dio.post(
+        '${AppConfig.apiBaseUrl}/api/v1/emr/encounters/$id/cancel/',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('예약 취소 실패: ${response.statusCode}');
+      }
+    } catch (e) {
+      AppLogger.error('Cancel appointment error: $e');
+      throw e;
+    }
+  }
 }
