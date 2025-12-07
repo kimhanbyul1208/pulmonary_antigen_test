@@ -149,6 +149,20 @@ class _ReportSummaryScreenState extends State<ReportSummaryScreen> {
                               child: const Text('상세 리포트 보기'),
                             ),
                           ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: () {
+                                Navigator.pushNamed(context, '/report-statistics');
+                              },
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                side: BorderSide(color: Theme.of(context).primaryColor),
+                              ),
+                              child: const Text('건강 상태 통계 보기'),
+                            ),
+                          ),
                         ],
                       ),
                     ),

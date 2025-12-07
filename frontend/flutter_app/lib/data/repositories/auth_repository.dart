@@ -224,7 +224,6 @@ class AuthRepository {
       final token = await _storage.read(key: 'access_token');
       if (token == null) throw Exception('로그인이 필요합니다.');
 
-      // TODO: 실제 API 엔드포인트 확인 필요. 현재는 가정.
       final response = await _dio.get(
         '${AppConfig.apiBaseUrl}/api/users/me/', 
         options: Options(

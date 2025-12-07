@@ -68,3 +68,29 @@ class PatientReportViewSet(viewsets.ViewSet):
         }
         
         return Response(mock_data)
+
+    @swagger_auto_schema(
+        operation_description="Get patient risk score history statistics",
+        manual_parameters=[
+            openapi.Parameter('patient_id', openapi.IN_QUERY, description="Patient ID", type=openapi.TYPE_INTEGER)
+        ],
+        responses={200: "Success"}
+    )
+    @action(detail=False, methods=['get'])
+    def statistics(self, request):
+        patient_id = request.query_params.get('patient_id')
+        
+        # Mock data for the last 6 months
+        statistics_data = [
+            {"date": "2025-07", "score": 65, "risk_level": "MODERATE"},
+            {"date": "2025-08", "score": 68, "risk_level": "MODERATE"},
+            {"date": "2025-09", "score": 72, "risk_level": "HIGH"},
+            {"date": "2025-10", "score": 75, "risk_level": "HIGH"},
+            {"date": "2025-11", "score": 80, "risk_level": "HIGH"},
+            {"date": "2025-12", "score": 85, "risk_level": "HIGH"},
+        ]
+        
+        return Response({
+            "patient_id": patient_id,
+            "history": statistics_data
+        })

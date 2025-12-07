@@ -89,8 +89,9 @@ def send_sms(phone_number: str, message: str) -> bool:
     """
     # TODO: Implement actual SMS sending logic
     logger.info(f"[SMS] To: {phone_number}, Message: {message}")
-
-    # For development, always return True
+    
+    # In production, this would call an external API
+    # For now, we just log it as successful
     return True
 
 

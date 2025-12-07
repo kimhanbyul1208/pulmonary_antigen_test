@@ -17,20 +17,20 @@ class _MedicalRecordsScreenState extends State<MedicalRecordsScreen> {
       'id': '1',
       'date': '2025-11-28',
       'modality': 'MRI',
-      'description': 'Brain Tumor Protocol',
+      'description': '뇌종양 정밀 검사',
       'seriesCount': 4,
       'aiStatus': 'COMPLETED',
-      'aiResult': 'High Probability (98.5%)',
+      'aiResult': '고위험군 (98.5%)',
       'thumbnail': 'assets/images/mri_thumb_1.png', // Placeholder
     },
     {
       'id': '2',
       'date': '2025-10-15',
       'modality': 'MRI',
-      'description': 'Routine Brain Checkup',
+      'description': '정기 뇌 검진',
       'seriesCount': 3,
       'aiStatus': 'COMPLETED',
-      'aiResult': 'Normal',
+      'aiResult': '정상',
       'thumbnail': 'assets/images/mri_thumb_2.png', // Placeholder
     },
   ];
@@ -63,7 +63,6 @@ class _MedicalRecordsScreenState extends State<MedicalRecordsScreen> {
       ),
       child: InkWell(
         onTap: () {
-          // TODO: Navigate to detail screen
           Navigator.pushNamed(
             context, 
             '/record-detail',
@@ -122,7 +121,7 @@ class _MedicalRecordsScreenState extends State<MedicalRecordsScreen> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            'Series: ${record['seriesCount']}',
+                            '시리즈: ${record['seriesCount']}',
                             style: const TextStyle(
                               color: Colors.blue,
                               fontSize: 12,

@@ -38,4 +38,31 @@ class ReportService {
       return null;
     }
   }
+
+  Future<List<Map<String, dynamic>>> getReportStatistics(int patientId) async {
+    try {
+      final token = await _storage.read(key: 'access_token');
+      if (token == null) return [];
+
+      final response = await _dio.get(
+        '${AppConfig.apiBaseUrl}/api/v1/emr/reports/statistics/',
+        queryParameters: {'patient_id': patientId},
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> history = response.data['history'];
+        return history.cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (e) {
+      AppLogger.error('Error fetching statistics', e);
+      return [];
+    }
+  }
 }

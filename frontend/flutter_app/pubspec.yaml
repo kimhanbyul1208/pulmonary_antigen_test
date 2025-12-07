@@ -17,6 +17,7 @@ dependencies:
   cupertino_icons: ^1.0.6
   google_nav_bar: ^5.0.6
   table_calendar: ^3.0.9
+  fl_chart: ^0.66.0
 
   # HTTP & API
   dio: ^5.4.0

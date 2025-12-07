@@ -21,6 +21,7 @@ import 'features/records/record_detail_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/profile/edit_profile_screen.dart';
 import 'features/report/report_summary_screen.dart';
+import 'features/report/report_statistics_screen.dart';
 import 'package:provider/provider.dart';
 import 'providers/appointment_provider.dart';
 import 'data/repositories/auth_repository.dart';
@@ -156,6 +157,7 @@ class MyApp extends StatelessWidget {
 
         // 리포트 관련
         '/report': (context) => const ReportSummaryScreen(),
+        '/report-statistics': (context) => const ReportStatisticsScreen(),
       },
     );
   }
