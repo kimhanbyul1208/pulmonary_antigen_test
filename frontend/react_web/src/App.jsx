@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext';
 import NavBar from './components/NavBar';
+import N8nChat from './components/N8nChat';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -273,6 +274,7 @@ function App() {
           </ProtectedRoute>
         } />
       </Routes>
+      <N8nChat />
     </>
   );
 }
