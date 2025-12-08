@@ -21,7 +21,7 @@ import {
   ContentCopy as CopyIcon,
   Print as PrintIcon,
 } from '@mui/icons-material';
-import axiosInstance from '../../api/axiosConfig';
+import axiosInstance from '../../api/axios';
 
 /**
  * 간호사용 환자 등록 페이지
