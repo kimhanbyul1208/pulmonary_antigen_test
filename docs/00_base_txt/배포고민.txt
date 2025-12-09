@@ -24,3 +24,9 @@
 - 정적 파일 압축은 반드시 Nginx에서 하길 원한다.
 
 위 조건으로 최적화 문서를 만들어줘.
+
+===
+실행
+# Django: cd backend/django_main && python manage.py runserver
+# React: cd frontend/react_web && npm install && npm run dev
+# Flutter: cd frontend/flutter_app && flutter pub get && flutter run
